@@ -16,7 +16,7 @@ jobs:
             os: macos-latest
             artifact: opencc-cli-aarch64-macos
           - target: x86_64-apple-darwin
-            os: macos-13
+            os: macos-latest
             artifact: opencc-cli-x86_64-macos
 
     runs-on: ${{ matrix.os }}
