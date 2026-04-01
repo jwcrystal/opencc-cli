@@ -1,15 +1,34 @@
 # opencc-cli
 
-Command-line tool for Chinese text conversion between Simplified and Traditional.
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-Supports 14 conversion modes including Simplified ↔ Traditional, Taiwan ↔ Simplified, Hong Kong ↔ Simplified, and Japanese Shinjitai.
+A fast command-line tool for converting Chinese text between Simplified and Traditional scripts.
 
-Built with [OpenCC](https://github.com/BYVoid/OpenCC) via [ferrous-opencc](https://crates.io/crates/ferrous-opencc) — pure Rust, no system dependencies.
+Built with [OpenCC](https://github.com/BYVoid/OpenCC) via [ferrous-opencc](https://crates.io/crates/ferrous-opencc) — pure Rust, zero system dependencies.
+
+## Features
+
+- **14 conversion modes** — Simplified ↔ Traditional, Taiwan, Hong Kong, Japanese Shinjitai, and more
+- **Flexible input** — direct text (`-t`), file(s) (`-f`), directory (`-d`), or stdin pipe
+- **Directory recursion** — scans subdirectories, preserves path structure in output
+- **In-place editing** — `--in-place` overwrites originals safely (temp file + rename)
+- **Extension filtering** — `--ext txt,md,csv` for directory mode
+- **Zero dependencies** — statically linked, no C library required
 
 ## Install
 
 ```bash
+git clone https://github.com/jwcrystal/opencc-cli.git
+cd opencc-cli
 cargo build --release
+```
+
+Binary: `target/release/opencc-cli`
+
+Or install directly:
+
+```bash
+cargo install --git https://github.com/jwcrystal/opencc-cli.git
 ```
 
 Binary: `target/release/opencc-cli`
