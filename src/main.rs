@@ -13,7 +13,25 @@ use input::{collect_dir_files, process_dir, process_file, read_file, read_stdin}
 
 #[derive(Parser)]
 #[command(name = "opencc-cli")]
-    #[command(name = "opencc-cli")]
+#[command(after_help = "Examples")]
+  \
+(Showing lines 1-24 of 224)"/>
+<arg>key>newString><![command(after_help = "Examples\n  \
+opencc-cli -m s2t -t \"开放中文转换\"\ \
+opencc-cli -m t2s -t \"開放中文轉換\"", \
+opencc-cli -m s2twp -t \"软件 鼠标 默认\"", \
+opencc-cli -m s2t -f input.txt", \
+opencc-cli -m s2t -f input.txt -o output.txt", \
+opencc-cli -m s2t -f a.txt -f b.txt -o out/", \
+opencc-cli -m s2t -d ./folder -o output_folder/", \
+opencc-cli -m s2t -d ./folder --ext txt,md,csv", \
+echo \"汉字\" | opencc-cli -m s2t", \
+opencc-cli -m s2t -f docs/ --in-place", \
+opencc-cli -m s2twp -d ./docs --in-place", \
+opencc-cli -m s2twp -d ./src --in-place", \
+opencc-cli -m s2hk -d ./docs", \
+opencc-cli -m s2hk -d ./docs --output ./docs_hk", \
+echo "supported modes:\ opencc-cli --help",
 #[command(about = "Convert Chinese text between Simplified and Traditional using OpenCC")]
 #[command(version)]
 #[command(about = "Supported modes:\ mode ... (14 total)")]
