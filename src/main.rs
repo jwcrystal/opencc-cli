@@ -9,7 +9,7 @@ use clap::Parser;
 
 use convert::create_converter;
 use error::AppError;
-use input::{collect_dir_files, process_dir, process_file, read_file, read_stdin};
+use input::{collect_dir_files, dirs_overlap, process_dir, process_file, read_file, read_stdin};
 
 const EXAMPLES: &str = "\
 Supported modes:
@@ -76,7 +76,7 @@ struct Cli {
 
 fn main() {
     if let Err(e) = run() {
-        eprintln!("{}", e);
+        eprintln!("{e}");
         std::process::exit(1);
     }
 }
@@ -87,14 +87,15 @@ fn run() -> Result<(), AppError> {
     validate_inputs(&cli)?;
 
     let converter = create_converter(&cli.mode)?;
-    let exts: Vec<&str> = cli.ext.split(',').map(|s| s.trim()).collect();
+    let exts: Vec<&str> = cli.ext.split(',').map(str::trim).collect();
 
     let has_text = cli.text.is_some();
     let has_files = !cli.file.is_empty();
     let has_dir = cli.dir.is_some();
 
     if has_text {
-        handle_text(&cli, &converter)
+        handle_text(&cli, &converter);
+        Ok(())
     } else if has_files {
         handle_files(&cli, &converter)
     } else if has_dir {
@@ -113,10 +114,10 @@ fn validate_inputs(cli: &Cli) -> Result<(), AppError> {
     let has_dir = cli.dir.is_some();
 
     if has_text && (has_files || has_dir) {
-        return Err(AppError::NoInput);
+        return Err(AppError::ConflictingInput);
     }
     if has_files && has_dir {
-        return Err(AppError::NoInput);
+        return Err(AppError::ConflictingInput);
     }
     if cli.in_place && cli.output.is_some() {
         return Err(AppError::InPlaceAndOutput);
@@ -131,17 +132,16 @@ fn validate_inputs(cli: &Cli) -> Result<(), AppError> {
     Ok(())
 }
 
-fn handle_text(cli: &Cli, converter: &ferrous_opencc::OpenCC) -> Result<(), AppError> {
+fn handle_text(cli: &Cli, converter: &ferrous_opencc::OpenCC) {
     let text = cli.text.as_ref().unwrap();
     let result = convert::convert_text(converter, text);
-    println!("{}", result);
-    Ok(())
+    println!("{result}");
 }
 
 fn handle_stdin(converter: &ferrous_opencc::OpenCC) -> Result<(), AppError> {
     let content = read_stdin()?;
     let result = convert::convert_text(converter, &content);
-    print!("{}", result);
+    print!("{result}");
     Ok(())
 }
 
@@ -164,46 +164,46 @@ fn handle_files(cli: &Cli, converter: &ferrous_opencc::OpenCC) -> Result<(), App
             (None, false) => {
                 let content = read_file(input_path)?;
                 let result = convert::convert_text(converter, &content);
-                println!("{}", result);
+                println!("{result}");
             }
             (Some(_), true) => unreachable!("validated in validate_inputs"),
         }
-    } else {
-        if cli.in_place {
-            for file_path in files {
-                if !file_path.exists() {
-                    return Err(AppError::FileNotFound(file_path.clone()));
-                }
-                process_file(converter, file_path, None, true)?;
+    } else if cli.in_place {
+        for file_path in files {
+            if !file_path.exists() {
+                return Err(AppError::FileNotFound(file_path.clone()));
             }
-        } else if let Some(out_dir) = &cli.output {
-            if !out_dir.exists() {
-                return Err(AppError::OutputDirNotFound(out_dir.clone()));
-            }
-            if !out_dir.is_dir() {
-                return Err(AppError::OutputNotDir(out_dir.clone()));
-            }
+            process_file(converter, file_path, None, true)?;
+        }
+    } else if let Some(out_dir) = &cli.output {
+        if !out_dir.exists() {
+            return Err(AppError::OutputDirNotFound(out_dir.clone()));
+        }
+        if !out_dir.is_dir() {
+            return Err(AppError::OutputNotDir(out_dir.clone()));
+        }
 
-            let mut seen = std::collections::HashSet::new();
-            for file_path in files {
-                let basename = file_path
-                    .file_name()
-                    .expect("file should have a name")
-                    .to_string_lossy()
-                    .to_string();
-                if !seen.insert(basename.clone()) {
-                    return Err(AppError::BasenameConflict(PathBuf::from(basename)));
-                }
+        let mut seen = std::collections::HashSet::new();
+        for file_path in files {
+            let basename = file_path
+                .file_name()
+                .ok_or_else(|| AppError::NoFileName(file_path.clone()))?
+                .to_string_lossy()
+                .to_string();
+            if !seen.insert(basename.clone()) {
+                return Err(AppError::BasenameConflict(PathBuf::from(basename)));
             }
+        }
 
-            for file_path in files {
-                if !file_path.exists() {
-                    return Err(AppError::FileNotFound(file_path.clone()));
-                }
-                let basename = file_path.file_name().expect("file should have a name");
-                let out_path = out_dir.join(basename);
-                process_file(converter, file_path, Some(&out_path), false)?;
+        for file_path in files {
+            if !file_path.exists() {
+                return Err(AppError::FileNotFound(file_path.clone()));
             }
+            let basename = file_path
+                .file_name()
+                .ok_or_else(|| AppError::NoFileName(file_path.clone()))?;
+            let out_path = out_dir.join(basename);
+            process_file(converter, file_path, Some(&out_path), false)?;
         }
     }
 
@@ -221,7 +221,12 @@ fn handle_dir(
     }
 
     match (&cli.output, cli.in_place) {
-        (Some(out_dir), false) => process_dir(converter, input_dir, out_dir, exts, false),
+        (Some(out_dir), false) => {
+            if dirs_overlap(input_dir, out_dir) {
+                return Err(AppError::OutputOverlapsInput(out_dir.clone()));
+            }
+            process_dir(converter, input_dir, out_dir, exts, false)
+        }
         (None, true) => process_dir(converter, input_dir, input_dir, exts, true),
         (None, false) => {
             let files = collect_dir_files(input_dir, exts)?;
@@ -229,7 +234,7 @@ fn handle_dir(
                 let content = read_file(file_path)?;
                 let result = convert::convert_text(converter, &content);
                 println!("--- {} ---", file_path.display());
-                println!("{}", result);
+                println!("{result}");
             }
             Ok(())
         }

@@ -3,7 +3,7 @@ use ferrous_opencc::OpenCC;
 
 use crate::error::AppError;
 
-/// Map a mode string like "s2t" to the corresponding BuiltinConfig.
+/// Map a mode string like "s2t" to the corresponding [`BuiltinConfig`].
 pub fn mode_to_config(mode: &str) -> Result<BuiltinConfig, AppError> {
     match mode {
         "s2t" => Ok(BuiltinConfig::S2t),
@@ -24,7 +24,7 @@ pub fn mode_to_config(mode: &str) -> Result<BuiltinConfig, AppError> {
     }
 }
 
-/// Create an OpenCC converter for the given mode.
+/// Create an [`OpenCC`] converter for the given mode.
 pub fn create_converter(mode: &str) -> Result<OpenCC, AppError> {
     let config = mode_to_config(mode)?;
     OpenCC::from_config(config).map_err(|e| AppError::OpenCC(e.to_string()))

@@ -267,6 +267,26 @@ fn error_inplace_with_text() {
 }
 
 #[test]
+fn error_text_with_file_conflict() {
+    let ctx = TestContext::new();
+    ctx.create_file("a.txt", "test");
+    let output = ctx
+        .run(&[
+            "-m",
+            "s2t",
+            "-t",
+            "text",
+            "-f",
+            ctx.tmpdir.join("a.txt").to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("mutually exclusive"));
+    assert!(!output.status.success());
+}
+
+#[test]
 fn error_inplace_with_output() {
     let ctx = TestContext::new();
     let output = ctx
