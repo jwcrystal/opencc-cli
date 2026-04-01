@@ -11,34 +11,39 @@ use convert::create_converter;
 use error::AppError;
 use input::{collect_dir_files, process_dir, process_file, read_file, read_stdin};
 
+const EXAMPLES: &str = "\
+Supported modes:
+  s2t    Simplified -> Traditional
+  t2s    Traditional -> Simplified
+  s2tw   Simplified -> Traditional (Taiwan)
+  tw2s   Traditional (Taiwan) -> Simplified
+  s2hk   Simplified -> Traditional (Hong Kong)
+  hk2s   Traditional (Hong Kong) -> Simplified
+  s2twp  Simplified -> Traditional (Taiwan, with phrases)
+  tw2sp  Traditional (Taiwan, with phrases) -> Simplified
+  t2tw   Traditional -> Traditional (Taiwan)
+  tw2t   Traditional (Taiwan) -> Traditional
+  t2hk   Traditional -> Traditional (Hong Kong)
+  hk2t   Traditional (Hong Kong) -> Traditional
+  t2jp   Traditional -> Japanese Shinjitai
+  jp2t   Japanese Shinjitai -> Traditional
+
+Examples:
+  opencc-cli -m s2t -t \"open chinese convert\"
+  opencc-cli -m s2t -f input.txt
+  opencc-cli -m s2t -f input.txt -o output.txt
+  opencc-cli -m s2t -f a.txt -f b.txt -o out/
+  opencc-cli -m s2t -d ./folder -o output_folder/
+  opencc-cli -m s2t -d ./folder --ext txt,md,csv
+  echo \"hanzi\" | opencc-cli -m s2t
+  opencc-cli -m s2t -f docs/ --in-place
+  opencc-cli -m s2twp -d ./src --in-place";
+
 #[derive(Parser)]
 #[command(name = "opencc-cli")]
-#[command(after_help = "Examples")]
-  \
-(Showing lines 1-24 of 224)"/>
-<arg>key>newString><![command(after_help = "Examples\n  \
-opencc-cli -m s2t -t \"开放中文转换\"\ \
-opencc-cli -m t2s -t \"開放中文轉換\"", \
-opencc-cli -m s2twp -t \"软件 鼠标 默认\"", \
-opencc-cli -m s2t -f input.txt", \
-opencc-cli -m s2t -f input.txt -o output.txt", \
-opencc-cli -m s2t -f a.txt -f b.txt -o out/", \
-opencc-cli -m s2t -d ./folder -o output_folder/", \
-opencc-cli -m s2t -d ./folder --ext txt,md,csv", \
-echo \"汉字\" | opencc-cli -m s2t", \
-opencc-cli -m s2t -f docs/ --in-place", \
-opencc-cli -m s2twp -d ./docs --in-place", \
-opencc-cli -m s2twp -d ./src --in-place", \
-opencc-cli -m s2hk -d ./docs", \
-opencc-cli -m s2hk -d ./docs --output ./docs_hk", \
-echo "supported modes:\ opencc-cli --help",
 #[command(about = "Convert Chinese text between Simplified and Traditional using OpenCC")]
 #[command(version)]
-#[command(about = "Supported modes:\ mode ... (14 total)")]
-#[command(after_help = "Examples:\n  \
-  opencc-cli -m s2t -t \"开放中文转换\"\ \
-  opencc-cli -m s2t -f input.txt\n  opencc-cli -m s2t -f input.txt -o output.txt\n  opencc-cli -m s2t -f a.txt -f b.txt -o out/\n  opencc-cli -m s2t -d ./docs -o ./out --ext txt,md\n  echo \"汉字\" | opencc-cli -m s2t\n\n  For file in output:\")]
-#[command(arg(required = true)]
+#[command(after_help = EXAMPLES)]
 struct Cli {
     /// Conversion mode
     #[arg(short, long, default_value = "s2t")]
@@ -95,7 +100,6 @@ fn run() -> Result<(), AppError> {
     } else if has_dir {
         handle_dir(&cli, &converter, &exts)
     } else {
-        // No explicit input — try stdin
         if std::io::stdin().is_terminal() {
             return Err(AppError::NoInput);
         }
@@ -108,25 +112,18 @@ fn validate_inputs(cli: &Cli) -> Result<(), AppError> {
     let has_files = !cli.file.is_empty();
     let has_dir = cli.dir.is_some();
 
-    // Mutually exclusive input sources
     if has_text && (has_files || has_dir) {
         return Err(AppError::NoInput);
     }
     if has_files && has_dir {
         return Err(AppError::NoInput);
     }
-
-    // --in-place and -o are mutually exclusive
     if cli.in_place && cli.output.is_some() {
         return Err(AppError::InPlaceAndOutput);
     }
-
-    // --in-place requires -f or -d
     if cli.in_place && !has_files && !has_dir {
         return Err(AppError::InPlaceRequiresFiles);
     }
-
-    // Multiple files require -o or --in-place
     if has_files && cli.file.len() > 1 && cli.output.is_none() && !cli.in_place {
         return Err(AppError::MultiFileNoOutput);
     }
@@ -187,7 +184,6 @@ fn handle_files(cli: &Cli, converter: &ferrous_opencc::OpenCC) -> Result<(), App
                 return Err(AppError::OutputNotDir(out_dir.clone()));
             }
 
-            // Check basename conflicts
             let mut seen = std::collections::HashSet::new();
             for file_path in files {
                 let basename = file_path

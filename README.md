@@ -1,8 +1,10 @@
 # opencc-cli
 
-A command-line tool for converting Chinese text between Simplified and Traditional using [OpenCC](https://github.com/BYVoid/OpenCC).
+Command-line tool for Chinese text conversion between Simplified and Traditional.
 
-Built with Rust and [ferrous-opencc](https://crates.io/crates/ferrous-opencc) (pure Rust, no system dependencies).
+Supports 14 conversion modes including Simplified ↔ Traditional, Taiwan ↔ Simplified, Hong Kong ↔ Simplified, and Japanese Shinjitai.
+
+Built with [OpenCC](https://github.com/BYVoid/OpenCC) via [ferrous-opencc](https://crates.io/crates/ferrous-opencc) — pure Rust, no system dependencies.
 
 ## Install
 
@@ -18,60 +20,44 @@ Binary: `target/release/opencc-cli`
 
 ```bash
 opencc-cli -m s2t -t "开放中文转换"
-# → 開放中文轉換
-```
-
-### Single file (stdout)
-
-```bash
-opencc-cli -m s2t -f input.txt
-```
-
-### Single file (output)
-
-```bash
-opencc-cli -m s2t -f input.txt -o output.txt
-```
-
-### Multiple files
-
-```bash
-opencc-cli -m s2t -f a.txt -f b.md -o out/
-```
-
-### Directory (recursive)
-
-```bash
-opencc-cli -m s2t -d ./src -o ./out --ext txt,md
-```
-
-### In-place overwrite
-
-```bash
-opencc-cli -m s2t -f input.txt --in-place
-opencc-cli -m s2t -d ./docs --in-place --ext txt,md
+# Output: 開放中文轉換
 ```
 
 ### Pipe (stdin)
 
 ```bash
 echo "汉字" | opencc-cli -m s2t
-# → 漢字
+# Output: 漢字
 ```
 
-## Options
+### Single file
 
-| Option | Description |
-|--------|-------------|
-| `-m, --mode` | Conversion mode (default: `s2t`) |
-| `-t, --text` | Direct text input |
-| `-f, --file` | Input file(s), can specify multiple times |
-| `-d, --dir` | Input directory (recursive) |
-| `-o, --output` | Output path (file or directory) |
-| `--ext` | Extension filter for directory mode (default: `txt,md,csv,json,xml,html,yaml,yml`) |
-| `--in-place` | Overwrite original files |
+```bash
+opencc-cli -m s2t -f input.txt              # stdout
+opencc-cli -m s2t -f input.txt -o output.txt  # write to file
+```
 
-## Conversion Modes
+### Multiple files
+
+```bash
+opencc-cli -m s2t -f a.txt -f b.txt -o out/
+```
+
+### Directory (recursive)
+
+```bash
+opencc-cli -m s2t -d ./folder -o output_folder/   # preserves structure
+opencc-cli -m s2t -d ./folder --ext txt,md,csv     # filter by extension
+```
+
+### In-place overwrite
+
+```bash
+opencc-cli -m s2t -f input.txt --in-place
+opencc-cli -m s2twp -d ./src --in-place
+```
+
+## Supported Modes
 
 | Mode | Direction |
 |------|-----------|
@@ -81,8 +67,8 @@ echo "汉字" | opencc-cli -m s2t
 | `tw2s` | Traditional (Taiwan) → Simplified |
 | `s2hk` | Simplified → Traditional (Hong Kong) |
 | `hk2s` | Traditional (Hong Kong) → Simplified |
-| `s2twp` | Simplified → Traditional (Taiwan, with vocabulary) |
-| `tw2sp` | Traditional (Taiwan, with vocabulary) → Simplified |
+| `s2twp` | Simplified → Traditional (Taiwan, with phrases) |
+| `tw2sp` | Traditional (Taiwan, with phrases) → Simplified |
 | `t2tw` | Traditional → Traditional (Taiwan) |
 | `tw2t` | Traditional (Taiwan) → Traditional |
 | `t2hk` | Traditional → Traditional (Hong Kong) |
@@ -90,11 +76,38 @@ echo "汉字" | opencc-cli -m s2t
 | `t2jp` | Traditional → Japanese Shinjitai |
 | `jp2t` | Japanese Shinjitai → Traditional |
 
+## Options
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `-m, --mode` | `s2t` | Conversion mode |
+| `-t, --text` | — | Direct text input (mutually exclusive with `-f`/`-d`) |
+| `-f, --file` | — | Input file(s), can repeat (mutually exclusive with `-t`/`-d`) |
+| `-d, --dir` | — | Input directory, recursive (mutually exclusive with `-t`/`-f`) |
+| `-o, --output` | — | Output path (file or directory) |
+| `--ext` | `txt,md,csv,json,xml,html,yaml,yml` | Extension filter for directory mode |
+| `--in-place` | — | Overwrite original files (incompatible with `-o`) |
+
+When no input is provided, reads from stdin (pipe).
+
+## Error Messages
+
+```
+error: unsupported mode 'xyz'. Available: s2t, t2s, ...
+error: file not found: '/path/to/file'
+error: input and output are the same file: 'path'. Use --in-place to overwrite.
+error: --in-place and -o are mutually exclusive.
+error: --in-place requires -f or -d input, not -t.
+error: multiple files require -o <directory> or --in-place.
+error: no matching files in 'folder' (--ext: txt,md,...)
+error: invalid UTF-8: ...
+```
+
 ## Rules
 
 - `-t`, `-f`, `-d` are mutually exclusive input sources
 - `-o` and `--in-place` are mutually exclusive
-- Multiple files (`-f` specified more than once) require `-o` or `--in-place`
+- Multiple files require `-o` or `--in-place`
 - Directory mode preserves relative path structure in output
 - Only UTF-8 encoded files are supported
 
@@ -103,3 +116,7 @@ echo "汉字" | opencc-cli -m s2t
 ```bash
 cargo test
 ```
+
+## License
+
+Apache-2.0
